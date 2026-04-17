@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS flight_states (
     PRIMARY KEY ((icao24), time_position)
 ) WITH CLUSTERING ORDER BY (time_position DESC);
 
+
 CREATE TABLE IF NOT EXISTS airport_traffic (
     airport_code text,
     traffic_hour timestamp,
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS airport_traffic (
     event_type text,
     PRIMARY KEY ((airport_code, traffic_hour), event_time, icao24)
 ) WITH CLUSTERING ORDER BY (event_time DESC);
+
 
 CREATE TABLE IF NOT EXISTS flight_routes (
     route_id text,
