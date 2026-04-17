@@ -1,0 +1,17 @@
+{
+  "namespace": "com.flightpipeline",
+  "type": "record",
+  "name": "FlightState",
+  "fields": [
+    {"name": "icao24", "type": "string"},
+    {"name": "time_position", "type": ["null", "long"], "default": null},
+    {"name": "callsign", "type": ["null", "string"], "default": null},
+    {"name": "origin_country", "type": "string"},
+    {"name": "longitude", "type": ["null", "float"], "default": null},
+    {"name": "latitude", "type": ["null", "float"], "default": null},
+    {"name": "baro_altitude", "type": ["null", "float"], "default": null},
+    {"name": "velocity", "type": ["null", "float"], "default": null},
+    {"name": "true_track", "type": ["null", "float"], "default": null},
+    {"name": "on_ground", "type": "boolean"}
+  ]
+}
