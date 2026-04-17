@@ -13,5 +13,6 @@
     {"name": "velocity", "type": ["null", "float"], "default": null},
     {"name": "true_track", "type": ["null", "float"], "default": null},
     {"name": "on_ground", "type": "boolean"}
+    
   ]
 }
