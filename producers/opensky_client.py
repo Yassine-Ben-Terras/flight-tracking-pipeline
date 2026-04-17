@@ -1,6 +1,7 @@
 import requests
 import json
 
+
 class OpenSkyClient:
     def __init__(self):
         self.base_url = "https://opensky-network.org/api"
@@ -32,3 +33,4 @@ if __name__ == "__main__":
     if flight_data and len(flight_data) > 0:
         print("\nSample Flight Record:")
         print(json.dumps(flight_data[0], indent=2))
+        
