@@ -19,8 +19,7 @@ class FlightDataProducer:
 
         if err is not None:
             print(f"Message delivery failed for record {msg.key()}: {err}") 
-            # this is where we would route to a Dead Letter Queue (DLQ)
-
+            
     def start_polling(self, interval=10):
         print(f"Starting to poll OpenSky API every {interval} seconds...")
         try:
@@ -33,6 +32,7 @@ class FlightDataProducer:
                         # OpenSky returns an array of arrays. We map it by index to our schema structure.
                         icao24 = str(state[0]) if state[0] else "UNKNOWN"
                         
+
                         # Constructing the JSON message based on our Avro schema draft
                         flight_record = {
                             "icao24": icao24,
@@ -46,6 +46,7 @@ class FlightDataProducer:
                             "true_track": state[10],
                             "on_ground": state[8]
                         }
+
 
                         # Convert dictionary to JSON string
                         record_value = json.dumps(flight_record)
@@ -66,7 +67,7 @@ class FlightDataProducer:
                 print(f"Sleeping for {interval} seconds...\n")
                 time.sleep(interval)
                 
-                
+
         except KeyboardInterrupt:
             print("\nStopping producer gracefully...")
         finally:
