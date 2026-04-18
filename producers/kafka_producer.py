@@ -71,6 +71,7 @@ class FlightDataProducer:
         finally:
             # Ensure everything is sent before shutting down
             self.producer.flush()
+            
 
 if __name__ == "__main__":
     flight_producer = FlightDataProducer(bootstrap_servers='localhost:9092', topic='flight-states')
