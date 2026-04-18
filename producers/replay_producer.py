@@ -72,4 +72,4 @@ class HistoricalReplayProducer:
 
 if __name__ == "__main__":
     replayer = HistoricalReplayProducer(bootstrap_servers='127.0.0.1:9092', topic='flight-states')
-    replayer.replay_data(parquet_filepath='data/sample_flights.parquet', speed_multiplier=10.0)
+    replayer.replay_data(parquet_filepath='data/sample_flights.parquet', speed_multiplier=1000.0)
