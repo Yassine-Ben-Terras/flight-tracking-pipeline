@@ -66,12 +66,12 @@ class FlightDataProducer:
                 print(f"Sleeping for {interval} seconds...\n")
                 time.sleep(interval)
                 
+                
         except KeyboardInterrupt:
             print("\nStopping producer gracefully...")
         finally:
             # Ensure everything is sent before shutting down
             self.producer.flush()
-            
 
 if __name__ == "__main__":
     flight_producer = FlightDataProducer(bootstrap_servers='localhost:9092', topic='flight-states')
