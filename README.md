@@ -1,4 +1,4 @@
-# ✈️ Real-Time Global Flight Tracking Pipeline
+# Real-Time Global Flight Tracking Pipeline
 
 An end-to-end, production-style data engineering pipeline designed to ingest, process, and analyze real-time global flight telemetry data.
 
