@@ -9,11 +9,20 @@ def get_spark_session():
         .config("spark.cassandra.connection.port", "9042") \
         .getOrCreate()
 
+# Standard batch writer that Cassandra fully supports
+def write_to_cassandra(batch_df, batch_id):
+    batch_df.write \
+        .format("org.apache.spark.sql.cassandra") \
+        .mode("append") \
+        .option("keyspace", "flight_tracking") \
+        .option("table", "country_traffic_density") \
+        .save()
+
 def main():
     spark = get_spark_session()
     spark.sparkContext.setLogLevel("WARN")
 
-    print("Starting Traffic Aggregation Job...")
+    print("Starting Traffic Aggregation Job with foreachBatch...")
 
     json_schema = StructType([
         StructField("icao24", StringType(), True),
@@ -28,7 +37,6 @@ def main():
         StructField("on_ground", BooleanType(), True)
     ])
 
-    # 1. Read Stream from Kafka
     kafka_df = spark.readStream \
         .format("kafka") \
         .option("kafka.bootstrap.servers", "kafka:29092") \
@@ -36,11 +44,9 @@ def main():
         .option("startingOffsets", "earliest") \
         .load()
 
-    # 2. Parse JSON and Cast Timestamp
     parsed_df = kafka_df.select(from_json(col("value").cast("string"), json_schema).alias("data")).select("data.*")
     transformed_df = parsed_df.withColumn("time_position", col("time_position").cast("timestamp"))
 
-    # 3. Apply Watermark and Tumbling Window Aggregation
     aggregated_df = transformed_df \
         .withWatermark("time_position", "2 minutes") \
         .groupBy(
@@ -48,20 +54,16 @@ def main():
             col("origin_country")
         ).count().withColumnRenamed("count", "active_flights")
 
-    # Flatten the struct so Cassandra can read the start/end times as standard columns
     final_df = aggregated_df \
         .withColumn("window_start", col("window.start")) \
         .withColumn("window_end", col("window.end")) \
         .drop("window")
 
-    # 4. Write Aggregations to Cassandra
-    print("Writing aggregations to Cassandra table: airport_traffic...")
+    # Pass the updates to our foreachBatch function instead of the Cassandra connector directly
     query = final_df.writeStream \
-        .format("org.apache.spark.sql.cassandra") \
-        .option("keyspace", "flight_tracking") \
-        .option("table", "airport_traffic") \
-        .option("checkpointLocation", "/tmp/spark-checkpoints/airport_traffic_v1") \
         .outputMode("update") \
+        .foreachBatch(write_to_cassandra) \
+        .option("checkpointLocation", "/tmp/spark-checkpoints/country_traffic_density_v4") \
         .start()
 
     query.awaitTermination()

@@ -42,14 +42,14 @@ def main():
     # 3. Correctly cast UNIX epoch seconds to Timestamp
     transformed_df = parsed_df.withColumn("time_position", col("time_position").cast("timestamp"))
 
-# 4. Write Stream to Cassandra
-    print("Writing stream to Cassandra table: flight_states...")
-    query = transformed_df.writeStream \
+# 4. Write Aggregations to Cassandra
+    print("Writing aggregations to Cassandra table: country_traffic_density...")
+    query = final_df.writeStream \
         .format("org.apache.spark.sql.cassandra") \
         .option("keyspace", "flight_tracking") \
-        .option("table", "flight_states") \
-        .option("checkpointLocation", "/tmp/spark-checkpoints/flight_states_v3") \
-        .outputMode("append") \
+        .option("table", "country_traffic_density") \
+        .option("checkpointLocation", "/tmp/spark-checkpoints/country_traffic_density_v2") \
+        .outputMode("update") \
         .start()
 
     query.awaitTermination()
