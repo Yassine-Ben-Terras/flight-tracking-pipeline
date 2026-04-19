@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw_flights
+    description: "Raw flight telemetry data"
+    database: flight_warehouse
+    schema: public
+    tables:
+      - name: flight_states
+        description: "Live state vectors from OpenSky API"

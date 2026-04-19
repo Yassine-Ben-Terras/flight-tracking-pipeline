@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: stg_flight_states
+    description: "Cleaned and standardized flight telemetry data."
+    columns:
+      - name: aircraft_id
+        description: "The unique ICAO24 identifier for the aircraft."
+        tests:
+          - not_null
+
+      - name: event_time
+        description: "The timestamp when the telemetry was recorded."
+        tests:
+          - not_null
+
+      - name: is_on_ground
+        description: "Boolean flag indicating if the aircraft is on the ground."
+        tests:
+          - accepted_values:
+              values: [true, false]

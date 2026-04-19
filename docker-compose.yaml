@@ -60,6 +60,7 @@ services:
     networks:
       - flight-network
 
+  # --- Spark Worker ---
   spark-worker:
     image: spark:3.4.1
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
@@ -67,3 +68,15 @@ services:
       - spark-master
     networks:
       - flight-network
+
+  # --- PostgreSQL ---
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: dbt_user
+      POSTGRES_PASSWORD: dbt_password
+      POSTGRES_DB: flight_warehouse
+    ports:
+      - "5433:5432"
+    networks:
+      - flight-network   
