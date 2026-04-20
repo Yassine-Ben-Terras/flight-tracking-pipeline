@@ -80,3 +80,11 @@ services:
       - "5433:5432"
     networks:
       - flight-network   
+      
+  # --- PostgreSQL ---
+  metabase:
+    image: metabase/metabase:v0.48.8
+    ports:
+      - "3000:3000"
+    networks:
+      - flight-network    
