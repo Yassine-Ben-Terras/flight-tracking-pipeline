@@ -15,14 +15,15 @@ movements as (
         lon,
         lat,
         altitude_meters,
+        altitude_feet,      -- New column
         velocity_mps,
+        velocity_knots,     -- New column
         true_track_degrees,
         is_on_ground
     from staging
     where event_time is not null
 
     {% if is_incremental() %}
-      -- This ensures we only append records newer than what is already in the table
       and event_time > (select max(event_time) from {{ this }})
     {% endif %}
 )

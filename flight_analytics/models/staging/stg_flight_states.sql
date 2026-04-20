@@ -13,7 +13,12 @@ renamed_and_casted as (
         cast(baro_altitude as double precision) as altitude_meters,
         cast(velocity as double precision) as velocity_mps,
         cast(true_track as double precision) as true_track_degrees,
-        cast(on_ground as boolean) as is_on_ground
+        cast(on_ground as boolean) as is_on_ground,
+        
+        -- Applying the new Macros
+        {{ meters_to_feet('baro_altitude') }} as altitude_feet,
+        {{ mps_to_knots('velocity') }} as velocity_knots
+
     from source
     where time_position is not null
 )
