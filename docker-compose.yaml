@@ -4,6 +4,7 @@ networks:
 
 volumes:
   cassandra_data:
+  grafana_data:
 
 services:
   # --- Zookeeper ---
@@ -79,12 +80,18 @@ services:
     ports:
       - "5433:5432"
     networks:
-      - flight-network   
-      
-  # --- PostgreSQL ---
-  metabase:
-    image: metabase/metabase:v0.48.8
+      - flight-network     
+
+  # --- Grafana ---
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     networks:
-      - flight-network    
+      - flight-network
+    volumes:
+      - grafana_data:/var/lib/grafana
+  
