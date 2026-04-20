@@ -6,3 +6,7 @@ venv/
 .idea/
 .vscode/
 data/data/
+.dbt/
+logs/
+target/
+flight_analytics/dbt_packages/

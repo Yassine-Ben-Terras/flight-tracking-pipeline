@@ -1,0 +1,12 @@
+flight_analytics: # <--- Ce nom doit être EXACTEMENT celui-ci
+  outputs:
+    dev:
+      type: postgres
+      threads: 4
+      host: postgres
+      port: 5432
+      user: dbt_user
+      password: dbt_password
+      dbname: flight_warehouse
+      schema: public
+  target: dev
