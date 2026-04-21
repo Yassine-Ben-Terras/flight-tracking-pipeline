@@ -116,8 +116,6 @@ python producers/opensky_ingestion.py
 
 - Grafana: http://localhost:3000  
 - Apache Airflow: http://localhost:8080  
-- FastAPI (Swagger UI): http://localhost:8000/docs  
-
 ---
 
 ## Data Modeling Strategy
