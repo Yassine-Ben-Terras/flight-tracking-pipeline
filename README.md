@@ -2,91 +2,91 @@
 
 An end-to-end, production-style data engineering pipeline designed to ingest, process, and analyze real-time global flight telemetry data.
 
-This project streams live state vectors from the OpenSky Network, processes them through a distributed architecture, and structures the data for scalable analytics and machine learning use cases.
+This project implements a hybrid architecture, separating low-latency streaming processes from scheduled batch analytics. It streams live state vectors from the OpenSky Network, processes them through a distributed architecture, and structures the data for real-time visualization and downstream ML use cases.
 
 ---
 
-##  Project Overview
+## Project Overview
 
 The goal of this project is to simulate a real-world streaming data platform by combining modern data engineering tools into a cohesive architecture.
 
 It demonstrates:
-
-* Real-time data ingestion
-* Stream processing at scale
-* NoSQL data modeling for time-series workloads
-* Analytical transformations for downstream consumption
-
----
-
-##  Architecture & Tech Stack
-
-The pipeline is fully containerized and built around a streaming-first architecture:
-
-* **Data Source:** OpenSky Network REST API (live flight state vectors)
-* **Ingestion Layer:** Apache Kafka + Schema Registry (Avro serialization)
-* **Processing Layer:** Apache Spark (Structured Streaming / PySpark)
-* **Storage Layer:** Apache Cassandra (optimized for high-throughput time-series data)
-* **Analytics Layer:** dbt (data transformation and modeling)
-* **Infrastructure:** Docker Compose (local orchestration)
+- Real-time data ingestion
+- Stream processing at scale (dual-write architecture)
+- Relational modeling for current state and NoSQL for time-series workloads
+- Automated analytical transformations (batch processing)
+- Secure data serving and real-time visualization
 
 ---
 
-##  High-Level Architecture
+## Architecture & Tech Stack
+
+The pipeline is fully containerized and built around a streaming-first, hybrid architecture:
+
+- Data Source: OpenSky Network REST API (live flight state vectors)
+- Ingestion Layer: Apache Kafka + Schema Registry
+- Processing Layer: Apache Spark (Structured Streaming / PySpark)
+- Storage Layer:
+  - PostgreSQL: Relational data warehouse for current state and metadata
+  - Apache Cassandra: Optimized NoSQL storage for high-throughput historical trajectories
+- Orchestration & Analytics Layer: Apache Airflow + dbt (batch data transformation on PostgreSQL)
+- Serving Layer: FastAPI (REST API for secure data access and business logic)
+- Visualization Layer: Grafana (real-time dashboards, geomaps, and KPIs)
+- Infrastructure: Docker Compose (local orchestration)
+
+---
+
+## High-Level Architecture
 
 ```
-OpenSky API → Kafka → Spark Streaming → Cassandra → dbt → Analytics / ML
+OpenSky API → Kafka → Spark Streaming ┬→ PostgreSQL (Current State) ──→ dbt (Airflow Batch) ┬→ FastAPI → Grafana
+                                      └→ Cassandra (Historical Logs) ───────────────────────┘
 ```
 
 ---
 
-##  Repository Structure
+## Repository Structure
 
 ```
 .
-├── docker-compose.yml     # Infrastructure orchestration
-├── cassandra/             # CQL schema definitions & initialization scripts
-├── producers/             # Kafka producers (OpenSky ingestion)
-├── spark-jobs/            # PySpark structured streaming jobs
-├── dbt/                   # Data transformation models (staging → marts)
-└── schemas/               # Avro schemas for Kafka messages
+├── docker-compose.yml
+├── dags/
+├── api/
+├── cassandra/
+├── producers/
+├── spark-jobs/
+├── dbt_project/
+└── schemas/
 ```
 
 ---
 
-##  Getting Started
+## Getting Started
 
-### 1. Start the Infrastructure
+### 1. Prepare the Environment
 
-Ensure Docker is running, then launch all services:
+Ensure Docker is running. Before launching Airflow, create the required directories and set permissions:
+
+```bash
+mkdir -p dags logs plugins
+chmod -R 777 dags logs plugins
+```
+
+### 2. Start the Infrastructure
 
 ```bash
 docker compose up -d
 ```
 
-This will start:
+This will start Kafka, Schema Registry, Cassandra, PostgreSQL, Spark Cluster, Airflow, FastAPI, and Grafana.
 
-* Zookeeper
-* Kafka
-* Schema Registry
-* Cassandra
-* Spark (Master + Worker)
-
----
-
-### 2. Initialize Cassandra
-
-Load the database schema:
+### 3. Initialize Databases
 
 ```bash
 docker exec -i flight-tracking-pipeline-cassandra-1 cqlsh < cassandra/init.cql
 ```
 
----
-
-### 3. Set Up Python Environment
-
-Prepare the ingestion service:
+### 4. Set Up Python Environment (Producer)
 
 ```bash
 python -m venv venv
@@ -94,64 +94,58 @@ source venv/bin/activate   # Windows: .\venv\Scripts\activate
 pip install -r producers/requirements.txt
 ```
 
----
-
-### 4. Create Kafka Topic
+### 5. Create Kafka Topic
 
 ```bash
 docker exec -it flight-tracking-pipeline-kafka-1 kafka-topics --create --topic flight-states --partitions 3 --replication-factor 1 --bootstrap-server localhost:9092
 ```
 
----
+### 6. Run the Pipeline
 
-### 5. Run the Pipeline
+- Start the Kafka producer:
+```bash
+python producers/opensky_ingestion.py
+```
 
-* Start the Kafka producer (OpenSky ingestion)
-* Launch Spark streaming jobs
-* Monitor data flowing into Cassandra
-
----
-
-##  Data Modeling Strategy
-
-The Cassandra schema is designed for high-performance, query-driven access patterns:
-
-* **`flight_states`** — Real-time flight telemetry (partitioned by `icao24`)
-* **`airport_traffic`** — Aggregated airport activity (partitioned by airport + time window)
-* **`flight_routes`** — Historical route data for trend analysis
+- Launch Spark streaming jobs to consume from Kafka and write to PostgreSQL and Cassandra
+- Airflow will automatically trigger dbt models on schedule
 
 ---
 
-##  Analytics Layer (dbt)
+## Accessing the Interfaces
 
-The dbt layer transforms raw streaming data into structured analytical models:
-
-* **Staging Models:** Data cleaning and normalization
-* **Intermediate Models:** Business logic and aggregations
-* **Mart Models:** KPI-ready datasets
-
-Example use cases:
-
-* Airport congestion analysis
-* Flight volume trends
-* Route popularity insights
-* Feature engineering for ML models
+- Grafana: http://localhost:3000  
+- Apache Airflow: http://localhost:8080  
+- FastAPI (Swagger UI): http://localhost:8000/docs  
 
 ---
 
-##  Key Engineering Highlights
+## Data Modeling Strategy
 
-* Event-driven architecture using Kafka
-* Schema enforcement with Avro + Schema Registry
-* Stateful stream processing with Spark Structured Streaming
-* Query-first data modeling in Cassandra
-* Modular and reproducible environment via Docker
+The pipeline uses a dual-database approach to optimize query performance:
+
+PostgreSQL (managed by dbt):
+- fact_flight_movements — real-time current positions and speeds
+- dim_aircraft / dim_airlines — metadata and dimension tables
+- Aggregated marts — daily KPIs, active flight counts, airport congestion metrics
+
+Apache Cassandra (time-series):
+- flight_states — append-only historical telemetry (partitioned by icao24)
+- flight_routes — historical route data for ML training and trend analysis
 
 ---
 
-##  Future Improvements
+## Key Engineering Highlights
 
-* Add real-time dashboards (Superset / Grafana)
-* Implement anomaly detection on flight patterns
-* Deploy to cloud (AWS / GCP)
-* Introduce CI/CD for pipeline automation
+- Hybrid pipeline: separation between continuous streaming (Spark) and scheduled batch analytics (Airflow + dbt)
+- Dual-write processing: writes to both PostgreSQL and Cassandra for different workloads
+- API serving layer: FastAPI decouples data access from visualization
+- Modular infrastructure: fully reproducible via Docker Compose
+
+---
+
+## Future Improvements
+
+- Implement anomaly detection on flight patterns using MLflow
+- Deploy to cloud platforms (AWS / GCP) using Terraform
+- Add CI/CD pipelines (GitHub Actions) for testing and deployment
