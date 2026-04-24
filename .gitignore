@@ -10,5 +10,6 @@ data/data/
 logs/
 target/
 flight_analytics/dbt_packages/
+
 fix_hadoop.py
 
