@@ -1,3 +1,9 @@
+{{
+    config(
+        materialized='table'
+    )
+}}
+
 with staging as (
     select * from {{ ref('stg_flight_states') }}
 ),
