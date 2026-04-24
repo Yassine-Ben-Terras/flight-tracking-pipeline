@@ -53,7 +53,7 @@ services:
 
   # --- Spark Master ---
   spark-master:
-    image: spark:3.4.1
+    image: apache/spark:3.5.0
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     ports:
       - "8080:8080"
@@ -63,7 +63,7 @@ services:
 
   # --- Spark Worker ---
   spark-worker:
-    image: spark:3.4.1
+    image: apache/spark:3.5.0
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
       - spark-master
@@ -79,8 +79,10 @@ services:
       POSTGRES_DB: flight_warehouse
     ports:
       - "5433:5432"
+    volumes:
+      - ./postgres:/docker-entrypoint-initdb.d
     networks:
-      - flight-network     
+      - flight-network
 
   # --- Grafana ---
   grafana:
@@ -94,47 +96,62 @@ services:
       - flight-network
     volumes:
       - grafana_data:/var/lib/grafana
-      
-  # --- APACHE AIRFLOW (Orchestration) ---
+
+  # --- APACHE AIRFLOW ---
   airflow-init:
     image: apache/airflow:2.8.1
     depends_on:
-      - postgres
+      postgres:
+        condition: service_started
+    networks:
+      - flight-network
     environment:
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://dbt_user:dbt_password@postgres:5432/airflow_metadata
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-    command: version
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com
+      "
 
   airflow-webserver:
     image: apache/airflow:2.8.1
     depends_on:
-      - postgres
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - flight-network
     restart: always
     ports:
-      - "8080:8080"
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-      - ./dbt_project:/opt/airflow/dbt_project # Pour que Airflow accède à dbt
-    environment:
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__LOAD_EXAMPLES=false
-    command: webserver
-
-  airflow-scheduler:
-    image: apache/airflow:2.8.1
-    depends_on:
-      - airflow-webserver
+      - "8081:8080"
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ./dbt_project:/opt/airflow/dbt_project
     environment:
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://dbt_user:dbt_password@postgres:5432/airflow_metadata
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
-    command: scheduler    
-  
+      - _PIP_ADDITIONAL_REQUIREMENTS=dbt-postgres
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - flight-network
+    restart: always
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./dbt_project:/opt/airflow/dbt_project
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://dbt_user:dbt_password@postgres:5432/airflow_metadata
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - _PIP_ADDITIONAL_REQUIREMENTS=dbt-postgres
+    command: scheduler

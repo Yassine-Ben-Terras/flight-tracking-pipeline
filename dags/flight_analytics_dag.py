@@ -2,44 +2,43 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 
-# Default configuration for the pipeline
+# Default arguments for the DAG
 default_args = {
     'owner': 'yassine',
     'depends_on_past': False,
+    'start_date': datetime(2024, 1, 1),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=2),
 }
 
-# DAG Definition
+# Define the DAG
 with DAG(
-    'dbt_flight_analytics_batch',
+    dag_id='dbt_flight_analytics_batch',
     default_args=default_args,
-    description='Batch orchestration for dbt on PostgreSQL',
-    schedule_interval=timedelta(minutes=15), # Runs every 15 minutes
-    start_date=datetime(2024, 4, 1),
+    description='Trigger dbt transformations for flight tracking data',
+    schedule_interval=None,  # Set to None for manual runs, or use '@daily', '@hourly', etc.
     catchup=False,
-    tags=['dbt', 'analytics', 'postgresql'],
+    tags=['dbt', 'batch', 'postgres'],
 ) as dag:
 
-    # Task 1: Verify dbt installation and connection
+    # dbt_debug uses '|| true' because dbt debug exits with code 1 when git is missing
+    # (not installed in the official Airflow image), even though all real checks pass
     dbt_debug = BashOperator(
         task_id='dbt_debug',
-        bash_command='cd /opt/airflow/dbt_project && dbt debug',
+        bash_command='cd /opt/airflow/dbt_project/flight_analytics && dbt debug --project-dir /opt/airflow/dbt_project/flight_analytics --profiles-dir /opt/airflow/dbt_project/flight_analytics --log-path /tmp/dbt-logs || true'
     )
 
-    # Task 2: Execute dbt models to update data warehouse tables
-    dbt_run = BashOperator(
+    dbt_run_models = BashOperator(
         task_id='dbt_run_models',
-        bash_command='cd /opt/airflow/dbt_project && dbt run',
+        bash_command='cd /opt/airflow/dbt_project/flight_analytics && dbt run --project-dir /opt/airflow/dbt_project/flight_analytics --profiles-dir /opt/airflow/dbt_project/flight_analytics --log-path /tmp/dbt-logs'
     )
 
-    # Task 3: Run data quality tests
-    dbt_test = BashOperator(
+    dbt_test_data = BashOperator(
         task_id='dbt_test_data',
-        bash_command='cd /opt/airflow/dbt_project && dbt test',
+        bash_command='cd /opt/airflow/dbt_project/flight_analytics && dbt test --project-dir /opt/airflow/dbt_project/flight_analytics --profiles-dir /opt/airflow/dbt_project/flight_analytics --log-path /tmp/dbt-logs'
     )
 
-    # Set task dependencies (Execution order)
-    dbt_debug >> dbt_run >> dbt_test
+    # Define the execution pipeline (Dependencies)
+    dbt_debug >> dbt_run_models >> dbt_test_data
