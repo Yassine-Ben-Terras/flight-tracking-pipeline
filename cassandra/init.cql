@@ -38,3 +38,22 @@ CREATE TABLE IF NOT EXISTS flight_routes (
     flight_duration_mins int,
     PRIMARY KEY ((route_id), flight_date, icao24)
 ) WITH CLUSTERING ORDER BY (flight_date DESC);
+
+
+CREATE TABLE IF NOT EXISTS country_traffic_density (
+    origin_country text,
+    window_start timestamp,
+    window_end timestamp,
+    active_flights bigint,
+    PRIMARY KEY ((origin_country), window_start)
+) WITH CLUSTERING ORDER BY (window_start DESC);
+
+
+CREATE TABLE IF NOT EXISTS flight_anomalies (
+    icao24 text,
+    time_position timestamp,
+    anomaly_type text,
+    velocity double,
+    baro_altitude double,
+    PRIMARY KEY ((icao24), time_position)
+) WITH CLUSTERING ORDER BY (time_position DESC);

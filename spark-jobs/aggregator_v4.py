@@ -5,7 +5,8 @@ from pyspark.sql.types import StructType, StructField, StringType, DoubleType, B
 def get_spark_session():
     return SparkSession.builder \
         .appName("AirportTrafficAggregation") \
-        .config("spark.cassandra.connection.host", "flight-tracking-pipeline-cassandra-1") \
+        .config("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.4.1") \
+        .config("spark.cassandra.connection.host", "cassandra") \
         .config("spark.cassandra.connection.port", "9042") \
         .getOrCreate()
 

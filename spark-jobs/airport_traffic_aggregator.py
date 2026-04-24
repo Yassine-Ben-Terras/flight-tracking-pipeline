@@ -5,7 +5,8 @@ from pyspark.sql.types import StructType, StructField, StringType, DoubleType, B
 def get_spark_session():
     return SparkSession.builder \
         .appName("AirportTrafficAggregation") \
-        .config("spark.cassandra.connection.host", "flight-tracking-pipeline-cassandra-1") \
+        .config("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.4.1") \
+        .config("spark.cassandra.connection.host", "cassandra") \
         .config("spark.cassandra.connection.port", "9042") \
         .getOrCreate()
 
@@ -55,11 +56,11 @@ def main():
         .drop("window")
 
     # 4. Write Aggregations to Cassandra
-    print("Writing aggregations to Cassandra table: airport_traffic...")
+    print("Writing aggregations to Cassandra table: country_traffic_density...")
     query = final_df.writeStream \
         .format("org.apache.spark.sql.cassandra") \
         .option("keyspace", "flight_tracking") \
-        .option("table", "airport_traffic") \
+        .option("table", "country_traffic_density") \
         .option("checkpointLocation", "/tmp/spark-checkpoints/airport_traffic_v1") \
         .outputMode("update") \
         .start()
