@@ -1,0 +1,120 @@
+{
+  "title": "Flight Tracking Overview",
+  "uid": "flight-overview",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total Aircraft Tracked",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "${DS_FLIGHT-WAREHOUSE}" },
+      "targets": [{
+        "rawSql": "SELECT COUNT(DISTINCT aircraft_id) AS total FROM stg_flight_states;",
+        "format": "table",
+        "refId": "A"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } } }
+    },
+    {
+      "id": 2,
+      "title": "Airborne vs On Ground",
+      "type": "piechart",
+      "gridPos": { "x": 4, "y": 0, "w": 8, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "${DS_FLIGHT-WAREHOUSE}" },
+      "targets": [{
+        "rawSql": "SELECT CASE WHEN is_on_ground THEN 'On Ground' ELSE 'Airborne' END AS status, COUNT(*) AS count FROM stg_flight_states GROUP BY is_on_ground;",
+        "format": "table",
+        "refId": "A"
+      }],
+      "options": { "legendDisplayMode": "table", "placement": "right" }
+    },
+    {
+      "id": 3,
+      "title": "Takeoffs Detected",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 4, "w": 4, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "${DS_FLIGHT-WAREHOUSE}" },
+      "targets": [{
+        "rawSql": "SELECT COUNT(*) AS takeoffs FROM (SELECT aircraft_id, is_on_ground, LAG(is_on_ground) OVER (PARTITION BY aircraft_id ORDER BY event_time) AS prev FROM fact_flight_movements) sub WHERE prev = true AND is_on_ground = false;",
+        "format": "table",
+        "refId": "A"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } } }
+    },
+    {
+      "id": 4,
+      "title": "Top 10 Countries by Flight Count",
+      "type": "barchart",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "${DS_FLIGHT-WAREHOUSE}" },
+      "targets": [{
+        "rawSql": "SELECT country_of_origin, COUNT(*) AS flight_count FROM stg_flight_states WHERE country_of_origin IS NOT NULL GROUP BY country_of_origin ORDER BY flight_count DESC LIMIT 10;",
+        "format": "table",
+        "refId": "A"
+      }],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } }
+    },
+    {
+      "id": 5,
+      "title": "Average Altitude Over Time (feet)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "${DS_FLIGHT-WAREHOUSE}" },
+      "targets": [{
+        "rawSql": "SELECT date_trunc('hour', event_time) AS time, AVG(altitude_feet) AS avg_altitude_feet FROM stg_flight_states WHERE event_time IS NOT NULL GROUP BY 1 ORDER BY 1;",
+        "format": "time_series",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "Movement Events Over Time",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "${DS_FLIGHT-WAREHOUSE}" },
+      "targets": [{
+        "rawSql": "SELECT date_trunc('hour', event_time) AS time, COUNT(*) AS movement_events FROM fact_flight_movements WHERE event_time IS NOT NULL GROUP BY 1 ORDER BY 1;",
+        "format": "time_series",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 7,
+      "title": "Fastest Flights",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "${DS_FLIGHT-WAREHOUSE}" },
+      "targets": [{
+        "rawSql": "SELECT aircraft_id, flight_callsign, ROUND(velocity_knots::numeric, 1) AS speed_knots, ROUND(altitude_feet::numeric, 0) AS altitude_ft, country_of_origin FROM stg_flight_states WHERE velocity_knots IS NOT NULL ORDER BY velocity_knots DESC LIMIT 20;",
+        "format": "table",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 8,
+      "title": "Most Active Aircraft",
+      "type": "barchart",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "${DS_FLIGHT-WAREHOUSE}" },
+      "targets": [{
+        "rawSql": "SELECT f.aircraft_id, COUNT(*) AS position_updates FROM fact_flight_movements f GROUP BY f.aircraft_id ORDER BY position_updates DESC LIMIT 15;",
+        "format": "table",
+        "refId": "A"
+      }]
+    }
+  ],
+  "templating": {
+    "list": [{
+      "name": "DS_FLIGHT-WAREHOUSE",
+      "type": "datasource",
+      "pluginId": "postgres",
+      "hide": 2
+    }]
+  }
+}

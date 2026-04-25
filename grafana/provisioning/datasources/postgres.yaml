@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: flight-warehouse
+    type: postgres
+    url: postgres:5432
+    user: dbt_user
+    secureJsonData:
+      password: dbt_password
+    jsonData:
+      database: flight_warehouse
+      sslmode: disable
+      postgresVersion: 1500
+      timescaledb: false
+    isDefault: true
+    editable: true
